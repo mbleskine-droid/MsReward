@@ -1,14 +1,6 @@
 """
 app.py - Microsoft Rewards Script v3 pour Render (Web Service gratuit)
 
-Interface Gradio qui :
-  - Ecoute sur le port HTTP (Render est content)
-  - Lit les credentials depuis les variables d'environnement
-  - Genere accounts.json + config.json automatiquement
-  - Lance le script a intervalle regulier (scheduler interne)
-  - Affiche les logs en temps reel
-  - Permet un declenchement manuel
-
 Variables d'environnement Render (Settings > Environment) :
   ACCOUNT_1_EMAIL    = ton_email@outlook.com
   ACCOUNT_1_PASSWORD = ton_mot_de_passe
@@ -26,12 +18,11 @@ from pathlib import Path
 import gradio as gr
 from apscheduler.schedulers.background import BackgroundScheduler
 
-# === Paths (v3 structure) ===
+# === Paths (v3 cherche config.json et accounts.json directement dans dist/) ===
 SCRIPT_DIR = Path("/usr/src/microsoft-rewards-script")
 DIST_DIR = SCRIPT_DIR / "dist"
-CONFIG_DIR = DIST_DIR / "config"
-ACCOUNTS_FILE = CONFIG_DIR / "accounts.json"
-CONFIG_FILE = CONFIG_DIR / "config.json"
+ACCOUNTS_FILE = DIST_DIR / "accounts.json"
+CONFIG_FILE = DIST_DIR / "config.json"
 LOG_FILE = Path("/app/rewards_script.log")
 MAX_LOG_LINES = 500
 RENDER_PORT = int(os.environ.get("PORT", 10000))
@@ -91,7 +82,7 @@ def generate_accounts_json() -> bool:
         return False
 
     try:
-        CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        DIST_DIR.mkdir(parents=True, exist_ok=True)
         with open(ACCOUNTS_FILE, "w", encoding="utf-8") as f:
             json.dump(accounts, f, indent=4)
         log(f"accounts.json genere: {len(accounts)} compte(s)")
@@ -105,7 +96,7 @@ def generate_accounts_json() -> bool:
 
 def ensure_config():
     try:
-        CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        DIST_DIR.mkdir(parents=True, exist_ok=True)
         if CONFIG_FILE.exists():
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                 config = json.load(f)
@@ -241,7 +232,6 @@ def parse_cron():
 
 # === Gradio UI ===
 def build_ui():
-    # theme et css passes dans launch() pour compatibilite Gradio 6
     with gr.Blocks(title="Microsoft Rewards Script") as demo:
         gr.Markdown(
             """
