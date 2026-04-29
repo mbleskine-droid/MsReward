@@ -21,9 +21,8 @@ WORKDIR /usr/src/microsoft-rewards-script
 
 RUN git clone -b v3 https://github.com/TheNetsky/Microsoft-Rewards-Script.git .
 
-RUN printf 'declare module "ms";\ndeclare module "semver";\n' > src/global-shims.d.ts
-
 RUN NODE_ENV=development npm ci \
+    && npm install --save-dev @types/ms@0.7.34 @types/semver \
     && rm -rf dist \
     && npx tsc \
     && rm -rf node_modules \
