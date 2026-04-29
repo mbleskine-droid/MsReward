@@ -64,16 +64,26 @@ def generate_accounts_json() -> bool:
         password = os.environ.get(f"ACCOUNT_{idx}_PASSWORD", "").strip()
         if not email or not password:
             break
-        account = {"email": email, "password": password}
-        proxy_url = os.environ.get(f"ACCOUNT_{idx}_PROXY_URL", "").strip()
-        if proxy_url:
-            account["proxy"] = {
-                "proxyAxios": True,
-                "url": proxy_url,
-                "port": int(os.environ.get(f"ACCOUNT_{idx}_PROXY_PORT", "0")),
-                "username": os.environ.get(f"ACCOUNT_{idx}_PROXY_USER", ""),
-                "password": os.environ.get(f"ACCOUNT_{idx}_PROXY_PASS", ""),
-            }
+
+        # Tous les champs requis par le schema Zod v3
+        account = {
+            "email": email,
+            "password": password,
+            "recoveryEmail": os.environ.get(f"ACCOUNT_{idx}_RECOVERY_EMAIL", email).strip(),
+            "geoLocale": os.environ.get(f"ACCOUNT_{idx}_GEO_LOCALE", "fr").strip(),
+            "langCode": os.environ.get(f"ACCOUNT_{idx}_LANG_CODE", "fr-FR").strip(),
+            "proxy": {
+                "proxyAxios": False,
+                "url": os.environ.get(f"ACCOUNT_{idx}_PROXY_URL", "").strip(),
+                "port": int(os.environ.get(f"ACCOUNT_{idx}_PROXY_PORT", "0") or "0"),
+                "username": os.environ.get(f"ACCOUNT_{idx}_PROXY_USER", "").strip(),
+                "password": os.environ.get(f"ACCOUNT_{idx}_PROXY_PASS", "").strip(),
+            },
+            "saveFingerprint": {
+                "mobile": False,
+                "desktop": False,
+            },
+        }
         accounts.append(account)
         idx += 1
 
@@ -279,10 +289,13 @@ def build_ui():
             |----------|-------------|---------|
             | `ACCOUNT_1_EMAIL` | Email Microsoft | `vous@outlook.com` |
             | `ACCOUNT_1_PASSWORD` | Mot de passe | `votre_mdp` |
+            | `ACCOUNT_1_RECOVERY_EMAIL` | Email de récupération (optionnel, = email par défaut) | `recovery@gmail.com` |
+            | `ACCOUNT_1_GEO_LOCALE` | Locale géo (défaut: fr) | `fr` |
+            | `ACCOUNT_1_LANG_CODE` | Code langue (défaut: fr-FR) | `fr-FR` |
             | `ACCOUNT_2_EMAIL` | 2e compte (optionnel) | `autre@outlook.com` |
             | `ACCOUNT_2_PASSWORD` | Mot de passe 2e compte | `mdp2` |
-            | `CRON_SCHEDULE` | Planning (defaut: 3x/jour) | `0 7,16,20 * * *` |
-            | `RUN_ON_START` | Lancer au demarrage | `true` |
+            | `CRON_SCHEDULE` | Planning (défaut: 3x/jour) | `0 7,16,20 * * *` |
+            | `RUN_ON_START` | Lancer au démarrage | `true` |
             """
         )
 
