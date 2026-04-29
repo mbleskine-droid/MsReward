@@ -1,7 +1,3 @@
-###############################################################################
-# Dockerfile pour Render (Web Service gratuit) - Microsoft Rewards Script v3
-###############################################################################
-
 FROM node:24-slim
 
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -11,7 +7,6 @@ ENV DEBIAN_FRONTEND=noninteractive \
     FORCE_HEADLESS=1 \
     PYTHONUNBUFFERED=1
 
-# Dependances systeme
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     python3-pip \
@@ -52,33 +47,28 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /usr/src/microsoft-rewards-script
 
-# Cloner la branche v3
 RUN git clone -b v3 https://github.com/TheNetsky/Microsoft-Rewards-Script.git .
 
-# Installer TOUTES les deps (incluant dev pour rimraf/tsc), build, puis nettoyer
 RUN npm ci \
-    && npm run build \
+    && rm -rf dist \
+    && npx tsc \
     && rm -rf node_modules \
     && npm ci --omit=dev --ignore-scripts \
     && npm cache clean --force
 
-# Installer Chromium via Patchright
 RUN npx patchright install --with-deps --only-shell chromium \
     && rm -rf /root/.cache /tmp/* /var/tmp/*
 
-# Structure de config v3
 RUN mkdir -p ./dist/config ./dist/sessions \
     && ln -sf /usr/src/microsoft-rewards-script/dist/config/config.json ./dist/config.json \
     && ln -sf /usr/src/microsoft-rewards-script/dist/config/accounts.json ./dist/accounts.json
 
-# Config par defaut headless=true
 RUN if [ -f src/config.example.json ]; then \
         cp src/config.example.json ./dist/config/config.json; \
         jq '.headless = true' ./dist/config/config.json > /tmp/config_tmp.json \
         && mv /tmp/config_tmp.json ./dist/config/config.json; \
     fi
 
-# App Python
 WORKDIR /app
 
 RUN pip3 install --no-cache-dir --break-system-packages \
