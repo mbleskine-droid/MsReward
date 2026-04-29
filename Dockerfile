@@ -50,6 +50,7 @@ WORKDIR /usr/src/microsoft-rewards-script
 RUN git clone -b v3 https://github.com/TheNetsky/Microsoft-Rewards-Script.git .
 
 RUN npm ci \
+    && npm install --save-dev @types/ms @types/semver \
     && rm -rf dist \
     && npx tsc \
     && rm -rf node_modules \
