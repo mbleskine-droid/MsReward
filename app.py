@@ -65,21 +65,15 @@ def read_log() -> str:
 
 
 def generate_accounts_json() -> bool:
-    """
-    Genere accounts.json depuis les variables d'environnement.
-    Supporte le format v3 : ACCOUNT_1_EMAIL, ACCOUNT_1_PASSWORD, ACCOUNT_2_EMAIL, etc.
-    """
     accounts = []
     idx = 1
 
-    # Methode v3 : ACCOUNT_N_EMAIL / ACCOUNT_N_PASSWORD
     while True:
         email = os.environ.get(f"ACCOUNT_{idx}_EMAIL", "").strip()
         password = os.environ.get(f"ACCOUNT_{idx}_PASSWORD", "").strip()
         if not email or not password:
             break
         account = {"email": email, "password": password}
-        # Proxy optionnel
         proxy_url = os.environ.get(f"ACCOUNT_{idx}_PROXY_URL", "").strip()
         if proxy_url:
             account["proxy"] = {
@@ -110,7 +104,6 @@ def generate_accounts_json() -> bool:
 
 
 def ensure_config():
-    """S'assure que config.json existe avec headless=true."""
     try:
         CONFIG_DIR.mkdir(parents=True, exist_ok=True)
         if CONFIG_FILE.exists():
@@ -132,7 +125,6 @@ def ensure_config():
 
 
 def run_script():
-    """Lance le script Microsoft Rewards."""
     global is_running, run_process
 
     if is_running:
@@ -173,9 +165,9 @@ def run_script():
         run_process.wait()
         code = run_process.returncode
         status = "SUCCES" if code == 0 else f"ERREUR (code {code})"
-        log(f"=" * 50)
+        log("=" * 50)
         log(f"FIN - Script termine: {status}")
-        log(f"=" * 50)
+        log("=" * 50)
 
     except Exception as e:
         log(f"ERREUR execution: {e}")
@@ -190,16 +182,16 @@ def run_script_threaded():
 
 def manual_run():
     if is_running:
-        return "âš ï¸ Script deja en cours. Patientez..."
+        return "⚠️ Script deja en cours. Patientez..."
     run_script_threaded()
-    return "âœ… Script lance ! Les logs vont apparaitre ci-dessous."
+    return "✅ Script lance ! Les logs vont apparaitre ci-dessous."
 
 
 def refresh_status():
     if is_running:
-        status = "ðŸŸ¡ En cours d'execution..."
+        status = "🟡 En cours d'execution..."
     else:
-        status = "ðŸŸ¢ En attente"
+        status = "🟢 En attente"
 
     next_run = "N/A"
     if scheduler.running:
@@ -249,40 +241,40 @@ def parse_cron():
 
 # === Gradio UI ===
 def build_ui():
-    with gr.Blocks(
-        title="Microsoft Rewards Script",
-        theme=gr.themes.Soft(),
-        css="""
-        .log-box { font-family: monospace; font-size: 12px; }
-        """,
-    ) as demo:
+    # theme et css passes dans launch() pour compatibilite Gradio 6
+    with gr.Blocks(title="Microsoft Rewards Script") as demo:
         gr.Markdown(
             """
-            # ðŸŽ Microsoft Rewards Script v3
-            [TheNetsky/Microsoft-Rewards-Script](https://github.com/TheNetsky/Microsoft-Rewards-Script) â€¢ Heberge sur Render
-
+            # 🎁 Microsoft Rewards Script v3
+            [TheNetsky/Microsoft-Rewards-Script](https://github.com/TheNetsky/Microsoft-Rewards-Script) • Heberge sur Render
             ---
             """
         )
 
         with gr.Row():
             with gr.Column(scale=1):
-                gr.Markdown("### ðŸ“Š Statut")
+                gr.Markdown("### 📊 Statut")
                 status_box = gr.Textbox(value="Demarrage...", label="Statut", interactive=False, lines=3)
-                gr.Button("ðŸ”„ Rafraichir").click(fn=refresh_status, outputs=status_box)
+                gr.Button("🔄 Rafraichir").click(fn=refresh_status, outputs=status_box)
 
             with gr.Column(scale=1):
-                gr.Markdown("### ðŸš€ Lancer manuellement")
-                run_btn = gr.Button("â–¶ï¸ Executer maintenant", variant="primary", size="lg")
+                gr.Markdown("### 🚀 Lancer manuellement")
+                run_btn = gr.Button("▶️ Executer maintenant", variant="primary", size="lg")
                 run_out = gr.Textbox(label="Resultat", interactive=False)
                 run_btn.click(fn=manual_run, outputs=run_out)
 
-        gr.Markdown("### ðŸ“œ Logs")
-        log_box = gr.Textbox(value="Chargement...", label="Logs", interactive=False, lines=20, max_lines=50, elem_classes=["log-box"])
+        gr.Markdown("### 📜 Logs")
+        log_box = gr.Textbox(
+            value="Chargement...",
+            label="Logs",
+            interactive=False,
+            lines=20,
+            max_lines=50,
+        )
 
         with gr.Row():
-            gr.Button("ðŸ”„ Rafraichir les logs").click(fn=refresh_logs, outputs=log_box)
-            gr.Button("ðŸ—‘ï¸ Vider les logs").click(fn=clear_logs, outputs=log_box)
+            gr.Button("🔄 Rafraichir les logs").click(fn=refresh_logs, outputs=log_box)
+            gr.Button("🗑️ Vider les logs").click(fn=clear_logs, outputs=log_box)
 
         timer = gr.Timer(value=10)
         timer.tick(fn=refresh_logs, outputs=log_box)
@@ -291,7 +283,7 @@ def build_ui():
         gr.Markdown(
             """
             ---
-            ### ðŸ” Variables Render (Settings > Environment)
+            ### 🔑 Variables Render (Settings > Environment)
 
             | Variable | Description | Exemple |
             |----------|-------------|---------|
@@ -313,18 +305,15 @@ if __name__ == "__main__":
     log("Microsoft Rewards Script v3 - Render")
     log("=" * 60)
 
-    # Check credentials
     has_creds = os.environ.get("ACCOUNT_1_EMAIL", "").strip() and os.environ.get("ACCOUNT_1_PASSWORD", "").strip()
     if has_creds:
         log(f"Credentials trouves: {os.environ.get('ACCOUNT_1_EMAIL')}")
     else:
         log("ATTENTION: Aucun credential ! Configure ACCOUNT_1_EMAIL + ACCOUNT_1_PASSWORD")
 
-    # Generate files
     generate_accounts_json()
     ensure_config()
 
-    # Scheduler
     cron = parse_cron()
     log(f"Planning: minute={cron['minute']} heure={cron['hour']} jour={cron['day']} mois={cron['month']} jsemaine={cron['day_of_week']}")
 
@@ -342,18 +331,17 @@ if __name__ == "__main__":
     scheduler.start()
     log("Scheduler actif")
 
-    # Run on start
     if os.environ.get("RUN_ON_START", "true").lower() == "true":
         log("RUN_ON_START=true -> Lancement dans 30s...")
         threading.Timer(30, run_script_threaded).start()
     else:
         log("RUN_ON_START=false")
 
-    # Start Gradio (bloquant)
     demo = build_ui()
     demo.launch(
         server_name="0.0.0.0",
         server_port=RENDER_PORT,
         show_error=True,
-        show_api=False,
+        theme=gr.themes.Soft(),
+        css=".log-box { font-family: monospace; font-size: 12px; }",
     )
