@@ -19,20 +19,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /usr/src/microsoft-rewards-script
 
-RUN git clone -b v3 https://github.com/TheNetsky/Microsoft-Rewards-Script.git .
-
-# Patch Utils.ts : StringValue est devenu un namespace incompatible comme type
-# On retire l'import et on remplace l'usage par string natif
-RUN sed -i 's/import { StringValue } from .ms.;//' src/util/Utils.ts \
-    && sed -i 's/: StringValue/: string/g' src/util/Utils.ts
-
-# Shims pour ms et semver (pas de @types dans les deps du projet)
-RUN printf 'declare module "ms";\ndeclare module "semver";\n' \
-    > src/types-shims.d.ts
-
-# NODE_ENV=development pour que npm ci installe les devDeps (typescript, etc.)
-# PAS de npm install après — ça casse tout par conflict resolution
-RUN NODE_ENV=development npm ci \
+# Tout en un seul RUN = impossible à cacher partiellement
+RUN git clone -b v3 https://github.com/TheNetsky/Microsoft-Rewards-Script.git . \
+    && sed -i 's/import { StringValue } from .ms.;//' src/util/Utils.ts \
+    && sed -i 's/: StringValue/: string/g' src/util/Utils.ts \
+    && printf 'declare module "ms";\ndeclare module "semver";\n' > src/types-shims.d.ts \
+    && NODE_ENV=development npm ci \
     && rm -rf dist \
     && npx tsc \
     && rm -rf node_modules \
