@@ -21,17 +21,14 @@ WORKDIR /usr/src/microsoft-rewards-script
 
 RUN git clone -b v3 https://github.com/TheNetsky/Microsoft-Rewards-Script.git .
 
-# Patch via python3 — pas de problème de shell quoting contrairement à sed
-RUN python3 -c "
-f = 'src/util/Utils.ts'
-c = open(f).read()
-c = c.replace(\"import { StringValue } from 'ms';\", '')
-c = c.replace(': StringValue', ': string')
-open(f, 'w').write(c)
-print('Patched:', c[:200])
-"
-
-RUN printf 'declare module "ms";\ndeclare module "semver";\n' > src/types-shims.d.ts
+# Écriture du script patch dans un fichier, puis exécution
+RUN echo 'f="src/util/Utils.ts"' > /tmp/patch.py \
+    && echo 'c=open(f).read()' >> /tmp/patch.py \
+    && echo 'c=c.replace("import { StringValue } from '\''ms'\'';", "")' >> /tmp/patch.py \
+    && echo 'c=c.replace(": StringValue", ": string")' >> /tmp/patch.py \
+    && echo 'open(f,"w").write(c)' >> /tmp/patch.py \
+    && python3 /tmp/patch.py \
+    && printf 'declare module "ms";\ndeclare module "semver";\n' > src/types-shims.d.ts
 
 RUN NODE_ENV=development npm ci \
     && rm -rf dist \
