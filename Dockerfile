@@ -21,14 +21,11 @@ WORKDIR /usr/src/microsoft-rewards-script
 
 RUN git clone -b v3 https://github.com/TheNetsky/Microsoft-Rewards-Script.git .
 
-# Écriture du script patch dans un fichier, puis exécution
-RUN echo 'f="src/util/Utils.ts"' > /tmp/patch.py \
-    && echo 'c=open(f).read()' >> /tmp/patch.py \
-    && echo 'c=c.replace("import { StringValue } from '\''ms'\'';", "")' >> /tmp/patch.py \
-    && echo 'c=c.replace(": StringValue", ": string")' >> /tmp/patch.py \
-    && echo 'open(f,"w").write(c)' >> /tmp/patch.py \
-    && python3 /tmp/patch.py \
-    && printf 'declare module "ms";\ndeclare module "semver";\n' > src/types-shims.d.ts
+# Patch avec node (déjà dispo, zéro problème de quoting)
+RUN node -e "const fs=require('fs');let c=fs.readFileSync('src/util/Utils.ts','utf8');c=c.replace(/import \{ StringValue \} from 'ms';/g,'').replace(/: StringValue/g,': string');fs.writeFileSync('src/util/Utils.ts',c);console.log('patch ok');"
+
+# Shim pour semver (ms n'a plus besoin de types après le patch)
+RUN echo 'declare module "semver";' > src/types-shims.d.ts
 
 RUN NODE_ENV=development npm ci \
     && rm -rf dist \
